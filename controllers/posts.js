@@ -1,5 +1,8 @@
+import express from "express"
 import mongoose from "mongoose";
 import PostMessage from "../models/postMessage.js";
+
+const router = express.Router();
 
 export const getPosts = async (req, res) => {
   try {
@@ -56,7 +59,15 @@ export const likePost = async (req, res) => {
     return res.status(404).send("NO POST WITH THIS ID");
    const post = await PostMessage.findById(id);
 
-   const index = post.likes.findIndex((id)=> id !== String(req.userId))
-   const likedPost = await PostMessage.findByIdAndUpdate(id, {likeCounts: post.likeCounts + 1}, {new : true});
+   const index = post.likes.findIndex((id)=> id === String(req.userId));
+
+   if(index === -1){
+    post.likes.push(req.userId);
+   }else{
+    post.likes= post.likes.filter((id) => id !== String(req.userId))
+   }
+   const likedPost = await PostMessage.findByIdAndUpdate(id, post, {new : true});
    res.json(likedPost);
 }
+
+export default router;
