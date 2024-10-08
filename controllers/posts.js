@@ -1,4 +1,4 @@
-import express from "express"
+import express from "express";
 import mongoose from "mongoose";
 import PostMessage from "../models/postMessage.js";
 
@@ -13,15 +13,35 @@ export const getPosts = async (req, res) => {
   }
 };
 
+export const getSearchPosts = async (req, res) => {
+  const { searchQuery, tags } = req.query;
+
+  try {
+    const title = new RegExp(searchQuery.trim(), "i");
+    const tagsArray = tags ? tags.split(",").map(tag => tag.trim()) : [];
+
+    const posts = await PostMessage.find({
+      $or: [{ title }, { tags: { $in: tagsArray } }],
+    });
+    res.json({ data: posts });
+  } catch (error) {
+    res.status(404).json({ Message: error.message });
+  }
+};
+
 export const createPost = async (req, res) => {
   const post = req.body;
-  const newPost = new PostMessage({...post, creator: req.userId, createdAt: new Date().toISOString()});
+  const newPost = new PostMessage({
+    ...post,
+    creator: req.userId,
+    createdAt: new Date().toISOString(),
+  });
   try {
-    console.log(newPost)
+    console.log(newPost);
     await newPost.save();
     res.status(201).json(newPost);
   } catch (error) {
-    console.error('Error saving post:', error.message);
+    console.error("Error saving post:", error.message);
     res.status(409).json({ message: error.message });
   }
 };
@@ -53,21 +73,23 @@ export const deletePost = async (req, res) => {
 
 export const likePost = async (req, res) => {
   const { id } = req.params;
-  if (!req.userId) return res.json({message: "Unauthenticated"});
+  if (!req.userId) return res.json({ message: "Unauthenticated" });
 
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("NO POST WITH THIS ID");
-   const post = await PostMessage.findById(id);
+  const post = await PostMessage.findById(id);
 
-   const index = post.likes.findIndex((id)=> id === String(req.userId));
+  const index = post.likes.findIndex((id) => id === String(req.userId));
 
-   if(index === -1){
+  if (index === -1) {
     post.likes.push(req.userId);
-   }else{
-    post.likes= post.likes.filter((id) => id !== String(req.userId))
-   }
-   const likedPost = await PostMessage.findByIdAndUpdate(id, post, {new : true});
-   res.json(likedPost);
-}
+  } else {
+    post.likes = post.likes.filter((id) => id !== String(req.userId));
+  }
+  const likedPost = await PostMessage.findByIdAndUpdate(id, post, {
+    new: true,
+  });
+  res.json(likedPost);
+};
 
 export default router;
